@@ -1,0 +1,1 @@
+<a href="{{ route('members.show', $member->id)}}">Lihat data peminjam</a>
