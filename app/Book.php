@@ -3,22 +3,53 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-use Session;
+use Illuminate\Support\Facades\Session;
 
 class Book extends Model
 {
     protected $fillable = ['title', 'author_id', 'amount'];
+    
+    public static function boot()
+    {
+        parent::boot();
+
+        self::updating(function($book)
+        {
+            if ($book->amount < $book->borrowed) {
+                Session::flash("flash_notification", [
+                    "level"=>"danger", 
+                    "message"=>"Jumlah buku $book->title harus >= " . $book->borrowed
+                ]);
+                return false;
+            }
+        });
+        
+        self::deleting(function($book)
+        {
+            if ($book->borrowLogs()->count() > 0) {
+                Session::flash("flash_notification", [
+                    "level"=>"danger", 
+                    "message"=>"Buku $book->title sudah pernah dipinjam."
+                ]);
+                return false;
+            }
+        });
+    }
 
     public function author()
     {
-        return $this->belongsTo(Author::class);
+        return $this->belongsTo('App\Author');
     }
 
     public function borrowLogs()
     {
-        return $this->hasMany(BorrowLog::class);
+        return $this->hasMany('App\BorrowLog');   
     }
-
+    
+    /**
+     * Accessor for stock attribute
+     * @return int
+     */
     public function getStockAttribute()
     {
         $borrowed = $this->borrowLogs()->borrowed()->count();
@@ -26,34 +57,13 @@ class Book extends Model
         return $stock;
     }
 
-    public static function boot()
-    {
-        Parent::boot();
-
-        self::updating(function($book){
-            if ($book->amount < $book->borrowed) {
-                Session::flash('flash_notification',[
-                    'level' => 'danger',
-                    'message' => 'Jumlah buku'. $book->title .'Harus >=' . $book->borrowed
-                ]);
-
-                return false;
-            }
-        });
-
-        self::deleting(function($book) {
-            if ($book->borrowLogs()->count() > 0) {
-                Session::flash('flash_notification', [
-                    'level' => 'danger',
-                    'message' => "Buku $book->title sudah pernah di pinjam."
-                ]);
-                return false;
-            }
-        });
-    }
-
+    /*
+     * Accessor for borrowed attribute
+     * @return int
+     */
     public function getBorrowedAttribute()
     {
-        return $this->borrowLogs()->borrowed()->count();
+       return $this->borrowLogs()->borrowed()->count(); 
     }
+    
 }

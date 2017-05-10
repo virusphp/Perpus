@@ -7,6 +7,7 @@ use App\Role;
 use App\User;
 use Yajra\Datatables\Html\Builder;
 use Yajra\Datatables\Facades\Datatables;
+use Session;
 
 class MembersController extends Controller
 {
@@ -39,6 +40,16 @@ class MembersController extends Controller
 
     public function destroy($id)
     {
-        # code...
+        $user = User::find($id);
+
+        if ($user->hasRole('member')) {
+            if (!$user->delete()) return redirect()->back();
+            Session::flash('flash_notification', [
+                'level' => 'success',
+                'message' => 'Member berhasil di hapus'
+            ]);
+        }
+
+        return redirect()->route('members.index');
     }
 }
